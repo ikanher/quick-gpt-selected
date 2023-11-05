@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Plugin Options</title>
+</head>
+<body>
+    <h1>Plugin Options</h1>
+    <form id="options-form">
+        <label for="openai-key">OpenAI Key:</label>
+        <input type="text" id="openai-key" name="openaiKey"><br><br>
+
+        <div id="prompts-container">
+            <h2>Prompts</h2>
+            <!-- Dynamic prompt entries will go here -->
+        </div>
+        <button type="button" id="add-prompt">Add Prompt</button><br><br>
+
+        <label for="max-tokens">Max tokens:</label>
+        <input type="number" id="max-tokens" name="max-tokens" min="1" max="2048" value="150">
+
+        <label for="temperature">Temperature:</label>
+        <input type="number" id="temperature" name="temperature" step="0.1" min="0" max="1" value="0.7">
+
+        <input type="submit" value="Save">
+    </form>
+
+    <template id="prompt-template">
+        <div class="prompt-entry">
+            <label>Name:</label>
+            <input type="text" class="prompt-name">
+            <label>Prompt:</label>
+            <input type="text" class="prompt-text">
+            <button type="button" class="remove-prompt">Remove</button>
+        </div>
+    </template>
+
+    <script src="options.js"></script>
+</body>
+</html>

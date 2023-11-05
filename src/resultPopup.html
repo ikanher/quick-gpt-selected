@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GPT-3 Result</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .container {
+      padding: 20px;
+      box-sizing: border-box;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+    .result-section {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+    .header {
+      font-size: 24px;
+      margin-bottom: 10px;
+      text-align: center;
+      color: #5a5a5a;
+    }
+    .result-header {
+      font-size: 20px;
+      margin-top: 20px;
+      color: #4a90e2;
+    }
+    .result-content {
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">GPT-3 Result</div>
+    <div class="result-section">
+      <div class="result-header">Brief Summary</div>
+      <div id="briefSummary" class="result-content"></div>
+    </div>
+    <div class="result-section">
+      <div class="result-header">Detailed Response</div>
+      <div id="verboseResult" class="result-content"></div>
+    </div>
+  </div>
+  <script src="resultPopup.js"></script>
+</body>
+</html>
