@@ -2,8 +2,8 @@ const extensionId = 'quick-gpt-selected';
 const notificationId = `${extensionId}-notification`;
 const translationURL = 'https://translate.googleapis.com';
 
-const briefSystemMessage = 'You are a helpful assistant. Your response must be very brief and concise. Use the following response format: {"response": "<RESPONSE HERE>"};
-const verboseSystemMessage = 'You are a helpful assistant. Your response must be detailed and comprehensive. Use the following response format: {"response": "<RESPONSE HERE>"};
+const briefSystemMessage = 'You are a helpful assistant. Your response must be very brief and concise, try not to use more than 100 chars.';
+const verboseSystemMessage = 'You are a helpful assistant. Your response must be detailed and comprehensive.';
 
 const callGPTAPI = async (query, prompt, systemMessage, maxTokens, temperature) => {
     const openAIKey = await getOpenAIKey();
@@ -42,101 +42,88 @@ const getOpenAIKey = async () => {
     const res = await browser.storage.local.get('openAIKey');
     return res.openAIKey;
 };
+
 const displayResult = async (query, prompt) => {
+    // Show loading notification
+    notify('Fetching result...', '', true);
+
     try {
         const res = await browser.storage.local.get(['maxTokens', 'temperature']);
         const responseData = await callGPTAPI(query, prompt, briefSystemMessage, res.maxTokens, res.temperature);
+
+        // Hide loading notification
+        browser.notifications.clear(notificationId);
+
         if (responseData && responseData.choices && responseData.choices.length > 0) {
             const briefResult = responseData.choices[0].message.content.trim();
-            notify(briefResult, query, prompt); // Pass the original query and prompt for later use
+            notificationMsg = briefResult + '\n' + 'Click for more...'
+            notify(notificationMsg, query, prompt); // Update with the result
         } else {
-            notify('Error: No result from GPT.');
+            notify('Error: No result from GPT.'); // Update with the error message
         }
     } catch (error) {
         console.error('Error fetching result from GPT:', error);
-        notify('Error fetching result from GPT.');
+        notify('Error fetching result from GPT.'); // Update with the error message
     }
 };
 
-const displayVerboseResult = async (query, prompt, notificationId) => {
+const displayVerboseResult = async (query, prompt, windowId) => {
     try {
         const res = await browser.storage.local.get(['maxTokens', 'temperature']);
         const responseData = await callGPTAPI(query, prompt, verboseSystemMessage, res.maxTokens, res.temperature);
+
         if (responseData && responseData.choices && responseData.choices.length > 0) {
+            console.log('displayVerboseResult we got responseData:', responseData);
             const verboseResult = responseData.choices[0].message.content.trim();
-            // Open the resultPopup.html with the brief summary and verbose result
-            browser.windows.create({
-                url: browser.runtime.getURL('resultPopup.html'),
-                type: 'popup',
-                width: 400,
-                height: 300
-            }).then((window) => {
-                // Communicate the results to the popup
-                const resultData = { briefSummary, verboseResult };
-                browser.runtime.sendMessage(window.id, resultData);
-            });
+
+            // Find the tab within the created window
+            const tabs = await browser.tabs.query({ windowId: windowId });
+            if (tabs.length > 0) {
+                // Send the message to the content script of the tab
+                browser.tabs.sendMessage(tabs[0].id, { verboseResult: verboseResult }).catch(error => {
+                    console.error('Error sending message to popup tab:', error);
+                });
+            }
         } else {
-            notify('Error: No verbose result from GPT.');
+            console.error('Error: No verbose result from GPT.');
         }
     } catch (error) {
         console.error('Error fetching verbose result from GPT:', error);
-        notify('Error fetching verbose result from GPT.');
     }
 };
 
-const notify = (briefSummary, prompt) => {
-    console.log(`Notify with message ${briefSummary}`);
+const notify = (message, isLoading = false) => {
+    const title = isLoading ? 'Loading data...' : 'GPT Result';
+
     browser.notifications.create(notificationId, {
         'type': 'basic',
-        'title': 'GPT Result',
-        'message': briefSummary
-    }).then(() => {
-        // Store the brief summary and prompt in local storage for later retrieval
-        browser.storage.local.set({ [notificationId]: { briefSummary, prompt } });
+        'title': title,
+        'message': message
     });
 };
 
-browser.notifications.onClicked.addListener((id) => {
+browser.notifications.onClicked.addListener(async (id) => {
     if (id === notificationId) {
-        // Retrieve the brief summary and prompt from storage
-        browser.storage.local.get(notificationId).then((res) => {
-            const { briefSummary, prompt } = res[notificationId];
-            if (briefSummary && prompt) {
-                // Fetch the verbose response using the prompt
-                callGPTAPI(briefSummary, prompt, verboseSystemMessage)
-                    .then(verboseResponse => {
-                        // Open the popup window with the brief summary and verbose response
-                        browser.windows.create({
-                            url: browser.runtime.getURL('resultPopup.html'),
-                            type: 'popup',
-                            width: 400,
-                            height: 300
-                        }).then((window) => {
-                            // You may need to communicate with the popup to pass the data
-                            // This can be done using messaging or by setting the data in storage
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error fetching verbose result from GPT:', error);
-                        // Handle error, maybe show a different notification
-                    });
-            }
+        // Open the resultPopup.html immediately
+        const popupURL = browser.runtime.getURL('resultPopup.html');
+        const window = await browser.windows.create({
+            url: popupURL,
+            type: 'popup',
+            width: 600,
+            height: 300
         });
+
+        // Retrieve the query and prompt from storage
+        const storedData = await browser.storage.local.get(notificationId);
+        const { query, prompt } = storedData[notificationId];
+
+        // Call the function to fetch verbose result and send to the popup
+        displayVerboseResult(query, prompt, window.id);
     }
 });
 
-const translateSelection = () => {
-    browser.tabs.executeScript({ code: 'window.getSelection().toString();' })
-        .then((selection) => {
-            if (selection[0]) {
-                displayResult(selection[0]);
-            }
-        });
-};
-
 const updateContextMenu = (prompts) => {
     // Remove all existing menu items to avoid duplicates
-    console.log('!!!!!!!!!!!!! UPDATECONTEXTMENU CALLED, PROMPTS:', prompts)
     browser.contextMenus.removeAll(() => {
         if (browser.runtime.lastError) {
             console.error(`Error removing context menus: ${browser.runtime.lastError}`);
@@ -146,7 +133,7 @@ const updateContextMenu = (prompts) => {
             // If there is only one prompt, create a single menu item
             browser.contextMenus.create({
                 id: extensionId,
-                title: prompts[0].name,
+                title: 'Quick GPT Selected',
                 contexts: ['selection'],
                 onclick: (info, tab) => displayResult(info.selectionText, prompts[0].prompt)
             }, () => {

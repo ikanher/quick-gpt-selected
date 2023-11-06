@@ -2,24 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GPT-3 Result</title>
+  <title>GPT Result</title>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #f9f9f9;
       color: #333;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
     }
+
     .container {
       padding: 20px;
       box-sizing: border-box;
-      flex-grow: 1;
+      max-height: 600px;
       overflow-y: auto;
     }
-    .result-section {
+
+    .loader {
+      border: 6px solid #f3f3f3; /* Light grey */
+      border-top: 6px solid #3498db; /* Blue */
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 2s linear infinite;
+      margin: 40px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .result {
       background-color: #fff;
       border: 1px solid #ddd;
       padding: 15px;
@@ -27,32 +41,24 @@
       margin-top: 10px;
       white-space: pre-wrap;
     }
+
     .header {
       font-size: 24px;
       margin-bottom: 10px;
       text-align: center;
-      color: #5a5a5a;
     }
-    .result-header {
-      font-size: 20px;
-      margin-top: 20px;
-      color: #4a90e2;
-    }
-    .result-content {
-      margin-top: 5px;
+
+    .verbose-result {
+      background-color: #e7e7e7;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">GPT-3 Result</div>
-    <div class="result-section">
-      <div class="result-header">Brief Summary</div>
-      <div id="briefSummary" class="result-content"></div>
-    </div>
-    <div class="result-section">
-      <div class="result-header">Detailed Response</div>
-      <div id="verboseResult" class="result-content"></div>
+    <div id="loading" class="loader"></div>
+    <div id="result" class="result" style="display: none;">
+      <div class="header">GPT Result</div>
+      <div id="verbose-result" class="verbose-result"></div>
     </div>
   </div>
   <script src="resultPopup.js"></script>
