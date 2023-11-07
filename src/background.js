@@ -45,7 +45,7 @@ const getOpenAIKey = async () => {
 
 const displayResult = async (query, prompt) => {
     // Show loading notification
-    notify('Fetching result...', '', true);
+    notify('Fetching result...', query, prompt, true);
 
     try {
         const res = await browser.storage.local.get(['maxTokens', 'temperature']);
@@ -56,7 +56,7 @@ const displayResult = async (query, prompt) => {
 
         if (responseData && responseData.choices && responseData.choices.length > 0) {
             const briefResult = responseData.choices[0].message.content.trim();
-            notificationMsg = briefResult + '\n' + 'Click for more...'
+            notificationMsg = `${briefResult}\n\n---\nCLICK FOR MORE...`;
             notify(notificationMsg, query, prompt); // Update with the result
         } else {
             notify('Error: No result from GPT.'); // Update with the error message
@@ -92,13 +92,18 @@ const displayVerboseResult = async (query, prompt, windowId) => {
     }
 };
 
-const notify = (message, isLoading = false) => {
+const notify = (message, query, prompt, isLoading = false) => {
     const title = isLoading ? 'Loading data...' : 'GPT Result';
 
     browser.notifications.create(notificationId, {
         'type': 'basic',
         'title': title,
         'message': message
+    }).then(() => {
+        if (!isLoading) {
+            // Store the query and prompt in local storage for later retrieval
+            browser.storage.local.set({ [notificationId]: { query, prompt } });
+        }
     });
 };
 
@@ -123,6 +128,7 @@ browser.notifications.onClicked.addListener(async (id) => {
 });
 
 const updateContextMenu = (prompts) => {
+    console.log('BUILDING MENU FROM PROMPTS:', prompts)
     // Remove all existing menu items to avoid duplicates
     browser.contextMenus.removeAll(() => {
         if (browser.runtime.lastError) {
@@ -153,6 +159,7 @@ const updateContextMenu = (prompts) => {
                 }
 
                 prompts.forEach((prompt, index) => {
+                    console.log(`Adding submenu: ${extensionId}-${index}`);
                     browser.contextMenus.create({
                         id: `${extensionId}-${index}`,
                         parentId: extensionId,
@@ -169,6 +176,17 @@ const updateContextMenu = (prompts) => {
         }
     });
 };
+
+// This function is called when there is a change in the storage
+function handleStorageChange(changes, area) {
+  if (area === 'local' && changes.prompts) {
+    // If there is a change in the prompts, update the context menu
+    updateContextMenu(changes.prompts.newValue);
+  }
+}
+
+// Add the storage change listener
+browser.storage.onChanged.addListener(handleStorageChange);
 
 // Load prompts from storage and update the context menu accordingly
 browser.storage.local.get('prompts').then((res) => {

@@ -2,6 +2,12 @@ document.addEventListener('DOMContentLoaded', restoreOptions);
 document.getElementById('options-form').addEventListener('submit', saveOptions);
 document.getElementById('add-prompt').addEventListener('click', () => addPrompt());
 
+// Define a default prompt
+const defaultPrompt = {
+    name: 'Explain concept',
+    prompt: 'Please, explain this concept to me:'
+};
+
 function saveOptions(e) {
     e.preventDefault();
     const openAIKey = document.querySelector('#openai-key').value;
@@ -22,6 +28,8 @@ function saveOptions(e) {
     }).catch(error => {
         console.error('Error saving options:', error);
     });
+
+    restoreOptions();
 }
 
 function restoreOptions() {
@@ -34,7 +42,15 @@ function restoreOptions() {
         document.querySelector('#openai-key').value = res.openAIKey;
         document.querySelector('#max-tokens').value = res.maxTokens;
         document.querySelector('#temperature').value = res.temperature;
-        res.prompts.forEach(addPrompt);
+
+        // Clear existing prompts before adding new ones
+        document.getElementById('prompts-container').innerHTML = '';
+
+        if (!res.prompts.length) {
+            addPrompt(defaultPrompt);
+        } else {
+            res.prompts.forEach(addPrompt);
+        }
     }).catch(error => {
         console.error('Error restoring options:', error);
     });

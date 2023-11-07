@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Quick GPT Selected",
-  "description": "Uses GPT-3 to process selected text and display results in a notification.",
-  "version": "0.1",
+  "description": "Uses GPT to process selected text and display brief results in a notification. When the notification is clicked, longer results appear in a popup window.",
+  "version": "0.2",
   "applications": {
     "gecko": {
       "id": "quick-gpt-selected@rehn.fi",
