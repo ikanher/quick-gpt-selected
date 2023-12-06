@@ -22,6 +22,7 @@ function saveOptions(e) {
         openAIKey,
         maxTokens,
         temperature,
+        model: document.querySelector('#model').value,
         prompts
     }).then(() => {
         console.log('Options saved.');
@@ -37,11 +38,13 @@ function restoreOptions() {
         openAIKey: '',
         maxTokens: '300',
         temperature: '0.7',
+        model: 'gpt-4',
         prompts: []
     }).then((res) => {
         document.querySelector('#openai-key').value = res.openAIKey;
         document.querySelector('#max-tokens').value = res.maxTokens;
         document.querySelector('#temperature').value = res.temperature;
+        document.querySelector('#model').value = res.model;
 
         // Clear existing prompts before adding new ones
         document.getElementById('prompts-container').innerHTML = '';

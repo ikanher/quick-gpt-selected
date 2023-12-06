@@ -5,7 +5,7 @@ const translationURL = 'https://translate.googleapis.com';
 const briefSystemMessage = 'You are a helpful assistant. Your response must be very brief and concise, try not to use more than 100 chars.';
 const verboseSystemMessage = 'You are a helpful assistant. Your response must be detailed and comprehensive.';
 
-const callGPTAPI = async (query, prompt, systemMessage, maxTokens, temperature) => {
+const callGPTAPI = async (query, prompt, systemMessage, maxTokens, temperature, model) => {
     const openAIKey = await getOpenAIKey();
     if (!openAIKey) {
         notify('Error: OpenAI API key is not set.');
@@ -13,7 +13,7 @@ const callGPTAPI = async (query, prompt, systemMessage, maxTokens, temperature) 
     }
 
     const data = {
-        model: "gpt-3.5-turbo",
+        model,
         messages: [
             {"role": "system", "content": systemMessage},
             {"role": "user", "content": `${prompt}\n\n${query}`}
@@ -48,8 +48,8 @@ const displayResult = async (query, prompt) => {
     notify('Fetching result...', query, prompt, true);
 
     try {
-        const res = await browser.storage.local.get(['maxTokens', 'temperature']);
-        const responseData = await callGPTAPI(query, prompt, briefSystemMessage, res.maxTokens, res.temperature);
+        const res = await browser.storage.local.get(['maxTokens', 'temperature', 'model']);
+        const responseData = await callGPTAPI(query, prompt, briefSystemMessage, res.maxTokens, res.temperature, res.model);
 
         // Hide loading notification
         browser.notifications.clear(notificationId);
@@ -69,8 +69,8 @@ const displayResult = async (query, prompt) => {
 
 const displayVerboseResult = async (query, prompt, windowId) => {
     try {
-        const res = await browser.storage.local.get(['maxTokens', 'temperature']);
-        const responseData = await callGPTAPI(query, prompt, verboseSystemMessage, res.maxTokens, res.temperature);
+        const res = await browser.storage.local.get(['maxTokens', 'temperature', 'model']);
+        const responseData = await callGPTAPI(query, prompt, verboseSystemMessage, res.maxTokens, res.temperature, res.model);
 
         if (responseData && responseData.choices && responseData.choices.length > 0) {
             console.log('displayVerboseResult we got responseData:', responseData);
