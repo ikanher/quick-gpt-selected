@@ -1,12 +1,26 @@
 document.addEventListener('DOMContentLoaded', restoreOptions);
 document.getElementById('options-form').addEventListener('submit', saveOptions);
 document.getElementById('add-prompt').addEventListener('click', () => addPrompt());
+document.getElementById('toggle-key').addEventListener('click', toggleKeyVisibility);
+
+const saveStatus = document.getElementById('save-status');
+const saveMessage = document.getElementById('save-message');
+const modelSelect = document.getElementById('model');
+const modelStatus = document.getElementById('model-status');
+let saveTimeout = null;
 
 // Define a default prompt
 const defaultPrompt = {
     name: 'Explain concept',
     prompt: 'Please, explain this concept to me:'
 };
+
+const fallbackModels = [
+    'gpt-4o-mini',
+    'gpt-4o',
+    'gpt-4.1-mini',
+    'gpt-4.1'
+];
 
 function saveOptions(e) {
     e.preventDefault();
@@ -25,8 +39,9 @@ function saveOptions(e) {
         model: document.querySelector('#model').value,
         prompts
     }).then(() => {
-        console.log('Options saved.');
+        updateSaveStatus('Saved');
     }).catch(error => {
+        updateSaveStatus('Save failed', true);
         console.error('Error saving options:', error);
     });
 
@@ -38,13 +53,13 @@ function restoreOptions() {
         openAIKey: '',
         maxTokens: '300',
         temperature: '0.7',
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         prompts: []
     }).then((res) => {
         document.querySelector('#openai-key').value = res.openAIKey;
         document.querySelector('#max-tokens').value = res.maxTokens;
         document.querySelector('#temperature').value = res.temperature;
-        document.querySelector('#model').value = res.model;
+        loadModels(res.openAIKey, res.model);
 
         // Clear existing prompts before adding new ones
         document.getElementById('prompts-container').innerHTML = '';
@@ -55,6 +70,7 @@ function restoreOptions() {
             res.prompts.forEach(addPrompt);
         }
     }).catch(error => {
+        updateSaveStatus('Failed to load settings', true);
         console.error('Error restoring options:', error);
     });
 }
@@ -64,9 +80,17 @@ function addPrompt(prompt = { name: '', prompt: '' }) {
     const div = document.createElement('div');
     div.className = 'prompt-entry';
     div.innerHTML = `
-        <input type="text" class="prompt-name" placeholder="Prompt Name" value="${prompt.name}">
-        <textarea class="prompt-text" placeholder="Prompt...">${prompt.prompt}</textarea>
-        <button type="button" class="remove-prompt">Remove</button>
+        <div class="field">
+            <label>Prompt name</label>
+            <input type="text" class="prompt-name" placeholder="Explain concept" value="${prompt.name}">
+        </div>
+        <div class="field">
+            <label>Prompt text</label>
+            <textarea class="prompt-text" placeholder="Please, explain this concept to me...">${prompt.prompt}</textarea>
+        </div>
+        <div class="prompt-actions">
+            <button type="button" class="btn btn-danger remove-prompt">Remove</button>
+        </div>
     `;
     div.querySelector('.remove-prompt').addEventListener('click', function() {
         this.closest('.prompt-entry').remove();
@@ -74,5 +98,123 @@ function addPrompt(prompt = { name: '', prompt: '' }) {
     container.appendChild(div);
 }
 
-// Call restoreOptions to populate the form when the page is loaded
-restoreOptions();
+function toggleKeyVisibility() {
+    const keyInput = document.getElementById('openai-key');
+    const toggleButton = document.getElementById('toggle-key');
+    if (keyInput.type === 'password') {
+        keyInput.type = 'text';
+        toggleButton.textContent = 'Hide';
+    } else {
+        keyInput.type = 'password';
+        toggleButton.textContent = 'Show';
+    }
+}
+
+async function loadModels(openAIKey, selectedModel) {
+    if (!modelSelect || !modelStatus) {
+        return;
+    }
+
+    modelStatus.textContent = openAIKey
+        ? 'Loading fast, non-reasoning models...'
+        : 'Add an API key to load curated models. Showing defaults.';
+
+    if (!openAIKey) {
+        setModelOptions(fallbackModels, selectedModel);
+        return;
+    }
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+                Authorization: `Bearer ${openAIKey}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load models (${response.status})`);
+        }
+
+        const data = await response.json();
+        const ids = Array.isArray(data.data)
+            ? data.data
+                  .map((item) => item && item.id)
+                  .filter((id) => typeof id === 'string' && isModernModelId(id))
+            : [];
+
+        const uniqueIds = Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b));
+        if (uniqueIds.length) {
+            const hasSelected = setModelOptions(uniqueIds, selectedModel);
+            modelStatus.textContent = hasSelected
+                ? `Loaded ${uniqueIds.length} curated models from OpenAI.`
+                : `Loaded ${uniqueIds.length} curated models. Updated selection to ${modelSelect.value}.`;
+            return;
+        }
+
+        {
+            const hasSelected = setModelOptions(fallbackModels, selectedModel);
+            modelStatus.textContent = hasSelected
+                ? 'No curated models returned. Showing defaults.'
+                : `No curated models returned. Updated selection to ${modelSelect.value}.`;
+        }
+    } catch (error) {
+        {
+            const hasSelected = setModelOptions(fallbackModels, selectedModel);
+            modelStatus.textContent = hasSelected
+                ? 'Could not load models. Showing defaults.'
+                : `Could not load models. Updated selection to ${modelSelect.value}.`;
+        }
+        console.error('Error loading models:', error);
+    }
+}
+
+function isModernModelId(modelId) {
+    const normalized = modelId.toLowerCase();
+    return normalized.startsWith('gpt-4o')
+        || normalized.startsWith('gpt-4.1');
+}
+
+function setModelOptions(models, selectedModel) {
+    modelSelect.innerHTML = '';
+    const normalized = models.filter(Boolean);
+    const hasSelected = Boolean(selectedModel && normalized.includes(selectedModel));
+
+    normalized.forEach((model) => {
+        const option = document.createElement('option');
+        option.value = model;
+        option.textContent = model;
+        modelSelect.appendChild(option);
+    });
+
+    const nextValue = selectedModel || normalized[0] || '';
+    modelSelect.value = nextValue;
+    if (!hasSelected) {
+        modelSelect.value = normalized[0] || '';
+    }
+    return hasSelected;
+}
+
+function updateSaveStatus(text, isError = false) {
+    if (saveStatus) {
+        saveStatus.textContent = text;
+        saveStatus.style.background = isError ? '#fdeceb' : '#e6f4f1';
+        saveStatus.style.color = isError ? '#b42318' : '#0b5b55';
+    }
+    if (saveMessage) {
+        saveMessage.textContent = text;
+        saveMessage.style.color = isError ? '#b42318' : '#4b5563';
+    }
+    if (saveTimeout) {
+        window.clearTimeout(saveTimeout);
+    }
+    saveTimeout = window.setTimeout(() => {
+        if (saveMessage) {
+            saveMessage.textContent = 'Changes are local to this browser.';
+            saveMessage.style.color = '#4b5563';
+        }
+    }, 3000);
+}
+
+document.getElementById('openai-key').addEventListener('change', (event) => {
+    loadModels(event.target.value, modelSelect.value);
+});

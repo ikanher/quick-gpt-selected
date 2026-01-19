@@ -2,41 +2,291 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Plugin Options</title>
+    <title>Quick GPT Selected Options</title>
+    <style>
+        :root {
+            --qgs-ink: #1f2937;
+            --qgs-muted: #4b5563;
+            --qgs-subtle: #6b7280;
+            --qgs-border: #d0d5dd;
+            --qgs-paper: #f6f3ee;
+            --qgs-surface: #ffffff;
+            --qgs-accent: #0f766e;
+            --qgs-accent-dark: #0b5b55;
+            --qgs-accent-darker: #094843;
+            --qgs-info: #1d4ed8;
+            --qgs-info-bg: #eef2ff;
+            --qgs-success: #0f766e;
+            --qgs-success-bg: #e6f4f1;
+            --qgs-warning: #b54708;
+            --qgs-warning-bg: #fff4e5;
+            --qgs-danger: #b42318;
+            --qgs-danger-bg: #fdeceb;
+            --qgs-danger-border: #f2b8b0;
+            --qgs-danger-hover: #fbd5d0;
+            --qgs-surface-muted: #f2f4f7;
+            --qgs-surface-muted-hover: #e8ebef;
+            --qgs-surface-muted-active: #dde2e7;
+            --qgs-surface-soft: #f8f9fb;
+            --qgs-surface-tint: #fcfbf9;
+            --qgs-radius: 12px;
+            --qgs-space-1: 4px;
+            --qgs-space-2: 8px;
+            --qgs-space-3: 12px;
+            --qgs-space-4: 16px;
+            --qgs-space-5: 24px;
+            --qgs-space-6: 32px;
+            --qgs-space-7: 40px;
+            font-family: "IBM Plex Sans", "Avenir Next", "Trebuchet MS", sans-serif;
+            color: var(--qgs-ink);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(circle at top, #ffffff 0%, #f6f3ee 45%, #efe9e1 100%);
+            color: var(--qgs-ink);
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: var(--qgs-space-7) var(--qgs-space-5);
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: var(--qgs-space-4);
+            margin-bottom: var(--qgs-space-6);
+        }
+
+        .page-title {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: -0.02em;
+        }
+
+        .page-subtitle {
+            margin: var(--qgs-space-2) 0 0;
+            color: var(--qgs-muted);
+            font-size: 14px;
+        }
+
+        .status-pill {
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: var(--qgs-success-bg);
+            color: var(--qgs-accent-dark);
+            font-size: 12px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--qgs-space-5);
+        }
+
+        .card {
+            background: var(--qgs-surface);
+            border: 1px solid var(--qgs-border);
+            border-radius: var(--qgs-radius);
+            padding: var(--qgs-space-5);
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        }
+
+        .card-title {
+            margin: 0 0 var(--qgs-space-3);
+            font-size: 18px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: var(--qgs-space-2);
+            margin-bottom: var(--qgs-space-4);
+        }
+
+        .field label {
+            font-size: 13px;
+            color: var(--qgs-muted);
+        }
+
+        .field input,
+        .field textarea,
+        .field select {
+            border: 1px solid var(--qgs-border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #ffffff;
+            color: var(--qgs-ink);
+        }
+
+        .field textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .field input:focus-visible,
+        .field textarea:focus-visible,
+        .field select:focus-visible,
+        button:focus-visible {
+            outline: 2px solid rgba(15, 118, 110, 0.5);
+            outline-offset: 2px;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--qgs-subtle);
+        }
+
+        .key-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--qgs-space-2);
+        }
+
+        .btn {
+            border-radius: 999px;
+            padding: 8px 14px;
+            border: 1px solid transparent;
+            background: var(--qgs-surface-muted);
+            font-size: 13px;
+            cursor: pointer;
+            color: var(--qgs-ink);
+        }
+
+        .btn-primary {
+            background: var(--qgs-accent);
+            color: #ffffff;
+            border-color: var(--qgs-accent-dark);
+        }
+
+        .btn-secondary {
+            border-color: var(--qgs-border);
+            background: #ffffff;
+        }
+
+        .btn-danger {
+            background: var(--qgs-danger-bg);
+            color: var(--qgs-danger);
+            border-color: var(--qgs-danger-border);
+        }
+
+        .btn:hover {
+            background: var(--qgs-surface-muted-hover);
+        }
+
+        .btn:active {
+            background: var(--qgs-surface-muted-active);
+        }
+
+        .btn-primary:hover {
+            background: var(--qgs-accent-dark);
+        }
+
+        .btn-primary:active {
+            background: var(--qgs-accent-darker);
+        }
+
+        .btn-secondary:hover {
+            background: var(--qgs-surface-soft);
+        }
+
+        .btn-danger:hover {
+            background: var(--qgs-danger-hover);
+        }
+
+        .prompt-entry {
+            border: 1px solid var(--qgs-border);
+            border-radius: 12px;
+            padding: var(--qgs-space-4);
+            margin-bottom: var(--qgs-space-4);
+            background: var(--qgs-surface-tint);
+        }
+
+        .prompt-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--qgs-space-2);
+            margin-top: var(--qgs-space-3);
+        }
+
+        .form-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--qgs-space-3);
+            margin-top: var(--qgs-space-5);
+        }
+
+        .save-status {
+            font-size: 13px;
+            color: var(--qgs-muted);
+        }
+    </style>
 </head>
 <body>
-    <h1>Plugin Options</h1>
-    <form id="options-form">
-        <label for="openai-key">OpenAI Key:</label>
-        <input type="password" id="openai-key" name="openaiKey" size=60><br><br>
-
-        <div id="prompts-container">
-            <h2>Prompts</h2>
-            <!-- Dynamic prompt entries will go here -->
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Quick GPT Selected</h1>
+                <p class="page-subtitle">Configure prompts, model, and response settings for instant selections.</p>
+            </div>
+            <div id="save-status" class="status-pill" aria-live="polite">Not saved</div>
         </div>
-        <button type="button" id="add-prompt">Add Prompt</button><br><br>
 
-        <label for="max-tokens">Max tokens:</label>
-        <input type="number" id="max-tokens" name="max-tokens" min="1" max="16384" value="300">
+        <form id="options-form">
+            <div class="grid">
+                <section class="card">
+                    <h2 class="card-title">API Access</h2>
+                    <div class="field">
+                        <label for="openai-key">OpenAI Key</label>
+                        <div class="key-row">
+                            <input type="password" id="openai-key" name="openaiKey" autocomplete="off">
+                            <button class="btn btn-secondary" id="toggle-key" type="button">Show</button>
+                        </div>
+                        <div class="hint">Stored locally in your browser. Keep it private.</div>
+                    </div>
+                </section>
 
-        <label for="temperature">Temperature:</label>
-        <input type="number" id="temperature" name="temperature" step="0.1" min="0" max="1" value="0.7">
+                <section class="card">
+                    <h2 class="card-title">Response Settings</h2>
+                    <div class="field">
+                        <label for="model">Model</label>
+                        <select id="model" name="model"></select>
+                        <div class="hint" id="model-status">Loading fast, non-reasoning models...</div>
+                    </div>
+                    <div class="field">
+                        <label for="max-tokens">Max tokens</label>
+                        <input type="number" id="max-tokens" name="max-tokens" min="1" max="16384" value="300">
+                        <div class="hint">Higher values return longer responses.</div>
+                    </div>
+                    <div class="field">
+                        <label for="temperature">Temperature</label>
+                        <input type="number" id="temperature" name="temperature" step="0.1" min="0" max="1" value="0.7">
+                        <div class="hint">Lower values are more deterministic.</div>
+                    </div>
+                </section>
+            </div>
 
-        <label for="model">Model:</label>
-        <input type="text" id="model" name="model" value="gpt-4"><br><br>
+            <section class="card" style="margin-top: var(--qgs-space-5);">
+                <h2 class="card-title">Prompt Library</h2>
+                <div id="prompts-container"></div>
+                <button type="button" class="btn btn-secondary" id="add-prompt">Add Prompt</button>
+            </section>
 
-        <input type="submit" value="Save settings">
-    </form>
-
-    <template id="prompt-template">
-        <div class="prompt-entry">
-            <label>Name:</label>
-            <input type="text" class="prompt-name">
-            <label>Prompt:</label>
-            <input type="text" class="prompt-text">
-            <button type="button" class="remove-prompt">Remove</button>
-        </div>
-    </template>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save settings</button>
+                <span class="save-status" id="save-message">Changes are local to this browser.</span>
+            </div>
+        </form>
+    </div>
 
     <script src="options.js"></script>
 </body>

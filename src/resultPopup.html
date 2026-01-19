@@ -4,28 +4,66 @@
   <meta charset="UTF-8">
   <title>GPT Result</title>
   <style>
+    :root {
+      --qgs-ink: #1f2937;
+      --qgs-muted: #4b5563;
+      --qgs-subtle: #6b7280;
+      --qgs-border: #d0d5dd;
+      --qgs-paper: #f6f3ee;
+      --qgs-surface: #ffffff;
+      --qgs-accent: #0f766e;
+      --qgs-accent-dark: #0b5b55;
+      --qgs-info: #1d4ed8;
+      --qgs-info-bg: #eef2ff;
+      --qgs-success: #0f766e;
+      --qgs-success-bg: #e6f4f1;
+      --qgs-warning: #b54708;
+      --qgs-warning-bg: #fff4e5;
+      --qgs-danger: #b42318;
+      --qgs-danger-bg: #fdeceb;
+      --qgs-danger-dark: #8f1f18;
+      --qgs-danger-hover: #a61f14;
+      --qgs-surface-muted: #f2f4f7;
+      --qgs-surface-muted-hover: #e8ebef;
+      --qgs-surface-muted-active: #dde2e7;
+      --qgs-surface-soft: #f8f9fb;
+      --qgs-surface-loader: #f0f1f3;
+      --qgs-surface-code: #f6f4f1;
+      --qgs-link: #1d4ed8;
+      --qgs-radius: 14px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
     body {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f9f9f9;
-      color: #333;
+      font-family: "IBM Plex Sans", "Avenir Next", "Trebuchet MS", sans-serif;
+      background: radial-gradient(circle at top, #ffffff 0%, #f6f3ee 40%, #efe9e1 100%);
+      color: var(--qgs-ink);
+      overflow-x: hidden;
     }
 
     .container {
-      padding: 20px;
-      box-sizing: border-box;
-      max-height: 600px;
-      overflow-y: auto;
+      min-height: 100vh;
+      padding: 28px 24px;
+      max-width: 980px;
+      margin: 0 auto;
     }
 
     .loader {
-      border: 6px solid #f3f3f3; /* Light grey */
-      border-top: 6px solid #3498db; /* Blue */
+      border: 5px solid var(--qgs-surface-loader);
+      border-top: 5px solid var(--qgs-accent);
       border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 2s linear infinite;
-      margin: 40px auto;
+      width: 44px;
+      height: 44px;
+      animation: spin 1.2s linear infinite;
+      margin: 16px auto 8px;
     }
 
     @keyframes spin {
@@ -34,30 +72,167 @@
     }
 
     .result {
-      background-color: #fff;
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 4px;
-      margin-top: 10px;
-      white-space: pre-wrap;
+      width: 100%;
+      background-color: var(--qgs-surface);
+      border: 1px solid var(--qgs-border);
+      padding: 22px;
+      border-radius: var(--qgs-radius);
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
     }
 
     .header {
-      font-size: 24px;
-      margin-bottom: 10px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-size: 20px;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .status-text {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--qgs-subtle);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      background: var(--qgs-surface-muted);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--qgs-ink);
+      cursor: pointer;
+    }
+
+    .btn-danger {
+      background: var(--qgs-danger);
+      border-color: var(--qgs-danger-dark);
+      color: #ffffff;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      border-color: var(--qgs-border);
+      color: var(--qgs-ink);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid rgba(15, 118, 110, 0.5);
+      outline-offset: 2px;
+    }
+
+    .btn:hover {
+      background: var(--qgs-surface-muted-hover);
+    }
+
+    .btn:active {
+      background: var(--qgs-surface-muted-active);
+    }
+
+    .btn-secondary:hover {
+      background: var(--qgs-surface-soft);
+    }
+
+    .btn-danger:hover {
+      background: var(--qgs-danger-hover);
     }
 
     .verbose-result {
-      background-color: #e7e7e7;
+      background-color: #ffffff;
+      border-top: 1px solid var(--qgs-border);
+      padding: 16px 0 0;
+      min-height: 200px;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-wrap: break-word;
+    }
+
+    .verbose-result h1,
+    .verbose-result h2,
+    .verbose-result h3,
+    .verbose-result h4 {
+      margin: 16px 0 8px;
+      font-weight: 600;
+    }
+
+    .verbose-result h1,
+    .verbose-result h2 {
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--qgs-border);
+    }
+
+    .verbose-result p {
+      margin: 10px 0;
+    }
+
+    .verbose-result ul,
+    .verbose-result ol {
+      padding-left: 20px;
+      margin: 10px 0;
+    }
+
+    .verbose-result li {
+      margin: 4px 0;
+    }
+
+    .verbose-result code {
+      font-family: "IBM Plex Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+      background: var(--qgs-surface-code);
+      padding: 0 4px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    .verbose-result pre {
+      background: var(--qgs-surface-code);
+      border-radius: 10px;
+      padding: 12px;
+      overflow-x: auto;
+    }
+
+    .verbose-result pre code {
+      display: block;
+      padding: 0;
+      background: transparent;
+    }
+
+    .verbose-result a {
+      color: var(--qgs-link);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div id="loading" class="loader"></div>
     <div id="result" class="result" style="display: none;">
-      <div class="header">GPT Result</div>
+      <div class="header">
+        <div>
+          <div class="title">Detailed Response</div>
+          <div id="status-text" class="status-text" role="status" aria-live="polite">Connecting...</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" id="copy-result" type="button">Copy</button>
+          <button class="btn btn-danger" id="stop-stream" type="button">Stop</button>
+          <button class="btn btn-secondary" id="close-popup" type="button">Close</button>
+        </div>
+      </div>
+      <div id="loading" class="loader"></div>
       <div id="verbose-result" class="verbose-result"></div>
     </div>
   </div>
