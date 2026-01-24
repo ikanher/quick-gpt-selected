@@ -10,6 +10,18 @@ const defaultOptions = {
     model: 'gpt-4o-mini'
 };
 
+const defaultPrompt = {
+    name: 'Explain concept',
+    prompt: 'Please, explain this concept to me:'
+};
+
+const normalizePrompts = (prompts) => {
+    if (!Array.isArray(prompts)) {
+        return [];
+    }
+    return prompts.filter((prompt) => prompt && prompt.name && prompt.prompt);
+};
+
 const requests = new Map();
 const subscribers = new Map();
 const portRequestIds = new Map();
@@ -609,6 +621,12 @@ browser.runtime.onMessage.addListener((message, sender) => {
         return;
     }
 
+    if (message.type === 'refresh-context-menu' && Array.isArray(message.prompts)) {
+        const prompts = normalizePrompts(message.prompts);
+        updateContextMenu(prompts.length ? prompts : [defaultPrompt]);
+        return;
+    }
+
     if (message.type === 'request-verbose') {
         startVerboseRequest(message.requestId);
         return;
@@ -666,13 +684,43 @@ const updateContextMenu = (prompts) => {
 
 function handleStorageChange(changes, area) {
     if (area === 'local' && changes.prompts) {
-        updateContextMenu(changes.prompts.newValue);
+        const nextPrompts = normalizePrompts(changes.prompts.newValue);
+        updateContextMenu(nextPrompts.length ? nextPrompts : [defaultPrompt]);
     }
 }
 
 browser.storage.onChanged.addListener(handleStorageChange);
 
-browser.storage.local.get('prompts').then((res) => {
-    const prompts = res.prompts || [];
-    updateContextMenu(prompts);
-});
+const loadPrompts = async () => {
+    const local = await browser.storage.local.get('prompts');
+    const localPrompts = normalizePrompts(local.prompts);
+    if (localPrompts.length) {
+        return localPrompts;
+    }
+    try {
+        if (browser.storage && browser.storage.sync) {
+            const synced = await browser.storage.sync.get('prompts');
+            const syncedPrompts = normalizePrompts(synced.prompts);
+            if (syncedPrompts.length) {
+                await browser.storage.local.set({ prompts: syncedPrompts });
+                return syncedPrompts;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to read synced prompts:', error);
+    }
+    await browser.storage.local.set({ prompts: [defaultPrompt] });
+    return [defaultPrompt];
+};
+
+const initContextMenus = async () => {
+    try {
+        const prompts = await loadPrompts();
+        updateContextMenu(prompts);
+    } catch (error) {
+        console.error('Failed to initialize context menu:', error);
+        updateContextMenu([defaultPrompt]);
+    }
+};
+
+initContextMenus();

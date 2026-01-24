@@ -40,6 +40,7 @@ function saveOptions(e) {
         prompts
     }).then(() => {
         updateSaveStatus('Saved');
+        browser.runtime.sendMessage({ type: 'refresh-context-menu', prompts }).catch(() => {});
     }).catch(error => {
         updateSaveStatus('Save failed', true);
         console.error('Error saving options:', error);
