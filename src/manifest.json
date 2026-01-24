@@ -3,10 +3,11 @@
   "name": "Quick GPT Selected",
   "description": "Uses GPT to process selected text and display streaming results inline. Click \"More\" for a detailed popup response.",
   "version": "0.4",
-  "applications": {
+  "browser_specific_settings": {
     "gecko": {
       "id": "quick-gpt-selected@rehn.fi",
-      "strict_min_version": "58.0"
+      "strict_min_version": "58.0",
+      "data_collection_permissions": []
     }
   },
   "background": {

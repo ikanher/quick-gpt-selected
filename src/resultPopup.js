@@ -116,6 +116,12 @@ const renderMarkdown = (source) => {
     return renderedBlocks.join('');
 };
 
+const setResultHtml = (html) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    resultText.replaceChildren(...doc.body.childNodes);
+};
+
 const setStatus = (text, isError = false) => {
     statusText.textContent = text;
     statusText.style.color = isError ? '#b42318' : '#0f766e';
@@ -125,7 +131,7 @@ const startStream = () => {
     loader.style.display = 'block';
     resultContainer.style.display = 'block';
     rawContent = '';
-    resultText.innerHTML = '';
+    resultText.textContent = '';
     setStatus('Connecting...');
     stopButton.disabled = false;
     copyButton.disabled = true;
@@ -147,7 +153,7 @@ const handleStreamMessage = (message) => {
     if (message.type === 'stream-start') {
         loader.style.display = 'block';
         rawContent = '';
-        resultText.innerHTML = '';
+        resultText.textContent = '';
         setStatus('Streaming...');
         stopButton.disabled = false;
         copyButton.disabled = true;
@@ -157,7 +163,7 @@ const handleStreamMessage = (message) => {
     if (message.type === 'stream-delta') {
         loader.style.display = 'none';
         rawContent += message.delta || '';
-        resultText.innerHTML = renderMarkdown(rawContent);
+        setResultHtml(renderMarkdown(rawContent));
         copyButton.disabled = rawContent.trim().length === 0;
         return;
     }
@@ -166,7 +172,7 @@ const handleStreamMessage = (message) => {
         loader.style.display = 'none';
         if (message.fullText) {
             rawContent = message.fullText;
-            resultText.innerHTML = renderMarkdown(rawContent);
+            setResultHtml(renderMarkdown(rawContent));
         }
         setStatus('Complete');
         stopButton.disabled = true;

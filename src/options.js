@@ -63,7 +63,7 @@ function restoreOptions() {
         loadModels(res.openAIKey, res.model);
 
         // Clear existing prompts before adding new ones
-        document.getElementById('prompts-container').innerHTML = '';
+        document.getElementById('prompts-container').replaceChildren();
 
         if (!res.prompts.length) {
             addPrompt(defaultPrompt);
@@ -80,22 +80,48 @@ function addPrompt(prompt = { name: '', prompt: '' }) {
     const container = document.getElementById('prompts-container');
     const div = document.createElement('div');
     div.className = 'prompt-entry';
-    div.innerHTML = `
-        <div class="field">
-            <label>Prompt name</label>
-            <input type="text" class="prompt-name" placeholder="Explain concept" value="${prompt.name}">
-        </div>
-        <div class="field">
-            <label>Prompt text</label>
-            <textarea class="prompt-text" placeholder="Please, explain this concept to me...">${prompt.prompt}</textarea>
-        </div>
-        <div class="prompt-actions">
-            <button type="button" class="btn btn-danger remove-prompt">Remove</button>
-        </div>
-    `;
-    div.querySelector('.remove-prompt').addEventListener('click', function() {
-        this.closest('.prompt-entry').remove();
+    const nameField = document.createElement('div');
+    nameField.className = 'field';
+
+    const nameLabel = document.createElement('label');
+    nameLabel.textContent = 'Prompt name';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'prompt-name';
+    nameInput.placeholder = 'Explain concept';
+    nameInput.value = prompt.name;
+
+    nameField.appendChild(nameLabel);
+    nameField.appendChild(nameInput);
+
+    const textField = document.createElement('div');
+    textField.className = 'field';
+
+    const textLabel = document.createElement('label');
+    textLabel.textContent = 'Prompt text';
+    const textArea = document.createElement('textarea');
+    textArea.className = 'prompt-text';
+    textArea.placeholder = 'Please, explain this concept to me...';
+    textArea.value = prompt.prompt;
+
+    textField.appendChild(textLabel);
+    textField.appendChild(textArea);
+
+    const actions = document.createElement('div');
+    actions.className = 'prompt-actions';
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'btn btn-danger remove-prompt';
+    removeButton.textContent = 'Remove';
+    removeButton.addEventListener('click', () => {
+        div.remove();
     });
+
+    actions.appendChild(removeButton);
+    div.appendChild(nameField);
+    div.appendChild(textField);
+    div.appendChild(actions);
     container.appendChild(div);
 }
 
@@ -176,7 +202,7 @@ function isModernModelId(modelId) {
 }
 
 function setModelOptions(models, selectedModel) {
-    modelSelect.innerHTML = '';
+    modelSelect.replaceChildren();
     const normalized = models.filter(Boolean);
     const hasSelected = Boolean(selectedModel && normalized.includes(selectedModel));
 
