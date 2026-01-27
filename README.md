@@ -27,9 +27,32 @@ Select text in a page, right-click, and choose a prompt from the Quick GPT Selec
 
 ## Installation
 
-Download the [xpi](https://github.com/ikanher/quick-gpt-selected/blob/master/quick_gpt_selected-0.5-fx.xpi?raw=true).
+### Firefox Add-ons (recommended)
 
-Go to 'about:addons' in Firefox. Click the settings wheel. Choose 'Install Add-on From File'. Navigate to xpi and click 'Open'.
+Install the official add-on from Mozilla:
+https://addons.mozilla.org/addon/quick-gpt-selected/
+
+### Manual install (legacy / testing)
+
+Download the latest XPI from GitHub Releases:
+- [quick_gqt_selected.xpi](https://github.com/ikanher/quick-gpt-selected/releases/latest/download/quick_gqt_selected.xpi)
+
+Go to 'about:addons' in Firefox. Click the settings wheel. Choose 'Install Add-on From File'. Navigate to the XPI and click 'Open'.
+
+Legacy build:
+- The legacy XPI is for older Firefox versions that do not support the latest manifest fields.
+- If you need Firefox 134 or earlier, download:
+  - [quick_gqt_selected-legacy.xpi](https://github.com/ikanher/quick-gpt-selected/releases/latest/download/quick_gqt_selected-legacy.xpi)
+
+### Release checklist
+
+1. Build the AMO (modern) package:
+   - `make xpi`
+2. Build the legacy package:
+   - `make legacy-xpi`
+3. Upload:
+   - AMO: upload `dist/quick_gqt_selected.xpi`
+   - GitHub Releases: attach both `dist/quick_gqt_selected.xpi` and `dist/quick_gqt_selected-legacy.xpi`
 
 ## Configuration
 
