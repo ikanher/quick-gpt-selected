@@ -5,7 +5,7 @@ DIST_DIR := dist
 SOURCES := $(shell find $(EXTENSION_DIR)/ -type f ! -name '*~')
 LEGACY_MIN_VERSION := 58.0
 LEGACY_XPI := $(EXTENSION_NAME)-legacy.xpi
-LEGACY_JQ_FILTER := .browser_specific_settings.gecko.strict_min_version="LEGACY_MIN_VERSION" | del(.browser_specific_settings.gecko.data_collection_permissions) | del(.browser_specific_settings.gecko_android)
+LEGACY_JQ_FILTER := .applications={gecko:{id:.browser_specific_settings.gecko.id,strict_min_version:"LEGACY_MIN_VERSION"}} | del(.browser_specific_settings)
 
 .PHONY: clean xpi legacy-xpi
 
