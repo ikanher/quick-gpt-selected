@@ -232,8 +232,8 @@ const openPopup = async (requestId, parentTabId) => {
     const createData = {
         url: popupURL,
         type: 'popup',
-        width: 680,
-        height: 540
+        width: 780,
+        height: 640
     };
 
     let windowInfo = null;
@@ -256,8 +256,8 @@ const openPopup = async (requestId, parentTabId) => {
     if (windowInfo && Number.isFinite(windowInfo.width) && Number.isFinite(windowInfo.height)) {
         const baseWidth = windowInfo.width;
         const baseHeight = windowInfo.height;
-        const targetWidth = Math.min(baseWidth, Math.max(360, Math.round(baseWidth * 0.5)));
-        const targetHeight = Math.max(360, baseHeight);
+        const targetWidth = Math.min(baseWidth, Math.max(680, Math.round(baseWidth * 0.6)));
+        const targetHeight = Math.max(540, baseHeight);
         const baseLeft = Number.isFinite(windowInfo.left) ? windowInfo.left : 0;
         const baseTop = Number.isFinite(windowInfo.top) ? windowInfo.top : 0;
 
