@@ -125,21 +125,6 @@ const extractTextFromEvent = (event) => {
     if (event.type === 'response.text.delta' && typeof event.delta === 'string') {
         return event.delta;
     }
-    if (event.type === 'response.output_text.done' && typeof event.text === 'string') {
-        return event.text;
-    }
-    if ((event.type === 'response.output_item.added' || event.type === 'response.output_item.done')
-        && event.item) {
-        if (event.item.type === 'message' && Array.isArray(event.item.content)) {
-            return extractTextFromContent(event.item.content);
-        }
-        if (Array.isArray(event.item.content)) {
-            return extractTextFromContent(event.item.content);
-        }
-        if (typeof event.item.text === 'string') {
-            return event.item.text;
-        }
-    }
     return '';
 };
 
@@ -321,6 +306,7 @@ const streamChatCompletion = async (requestId) => {
             format: { type: 'text' }
         },
         stream: supportsStreaming,
+        temperature: resolvedTemperature,
         max_output_tokens: resolvedMaxTokens
     };
 
@@ -405,6 +391,7 @@ const handleResponseStream = async (response, request, supportsStreaming, reques
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
     let doneStreaming = false;
+    let fallbackFullText = '';
 
     while (!doneStreaming) {
         const { value, done } = await reader.read();
@@ -454,16 +441,14 @@ const handleResponseStream = async (response, request, supportsStreaming, reques
             let delta = '';
             if (parsed && typeof parsed.type === 'string') {
                 if (parsed.type === 'response.completed') {
-                    const fullText = extractTextFromResponse(parsed.response).trim();
+                    const fullText = extractTextFromResponse(parsed.response);
                     if (fullText) {
-                        request.fullText = fullText;
-                        broadcast(requestId, { type: 'stream-delta', requestId, delta: fullText });
+                        fallbackFullText = fullText;
                     }
                 } else if (parsed.type === 'response.incomplete') {
-                    const fullText = extractTextFromResponse(parsed.response).trim();
+                    const fullText = extractTextFromResponse(parsed.response);
                     if (fullText) {
-                        request.fullText = fullText;
-                        broadcast(requestId, { type: 'stream-delta', requestId, delta: fullText });
+                        fallbackFullText = fullText;
                     } else {
                         const reason = parsed.response &&
                             parsed.response.incomplete_details &&
@@ -486,9 +471,6 @@ const handleResponseStream = async (response, request, supportsStreaming, reques
                     delta = extractTextFromEvent(parsed);
                 }
             }
-            if (parsed && parsed.type === 'response.output_item.done' && request.fullText) {
-                delta = '';
-            }
             if (delta) {
                 request.fullText += delta;
                 broadcast(requestId, {
@@ -498,6 +480,10 @@ const handleResponseStream = async (response, request, supportsStreaming, reques
                 });
             }
         }
+    }
+
+    if (!request.fullText && fallbackFullText) {
+        request.fullText = fallbackFullText;
     }
 
     if (!request.fullText) {

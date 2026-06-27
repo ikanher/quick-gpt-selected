@@ -1,0 +1,14 @@
+{
+  "name": "quick-gpt-selected",
+  "private": true,
+  "version": "0.6.0",
+  "description": "Build dependencies for the Quick GPT Selected Firefox extension.",
+  "scripts": {
+    "build": "make xpi",
+    "build:legacy": "make legacy-xpi",
+    "lint:web-ext": "web-ext lint --source-dir=src"
+  },
+  "devDependencies": {
+    "mathjax": "4.1.0"
+  }
+}

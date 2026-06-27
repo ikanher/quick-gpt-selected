@@ -12,6 +12,9 @@ const requestId = params.get('requestId') || 'latest';
 let activeRequestId = requestId;
 let port = null;
 let rawContent = '';
+let mathTypesetScheduled = false;
+let mathTypesetQueue = Promise.resolve();
+let mathJaxPollId = null;
 
 const escapeHtml = (value) => value.replace(/[&<>"']/g, (char) => {
     switch (char) {
@@ -59,34 +62,69 @@ const renderInlineMarkdown = (text) => {
     });
 };
 
-const renderMarkdown = (source) => {
-    if (!source) {
-        return '';
-    }
+const parseMarkdownBlocks = (source) => {
+    const blocks = [];
+    let textLines = [];
+    let codeLines = null;
+    let codeLang = '';
 
-    const codeBlocks = [];
-    let text = source.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-        const index = codeBlocks.length;
-        codeBlocks.push({
-            lang: lang || '',
-            code
-        });
-        return `@@CODEBLOCK_${index}@@`;
+    const flushText = () => {
+        if (textLines.length) {
+            blocks.push({
+                type: 'text',
+                text: textLines.join('\n')
+            });
+            textLines = [];
+        }
+    };
+
+    source.replace(/\r\n?/g, '\n').split('\n').forEach((line) => {
+        if (codeLines) {
+            if (/^\s*```\s*$/.test(line)) {
+                blocks.push({
+                    type: 'code',
+                    lang: codeLang,
+                    code: codeLines.join('\n')
+                });
+                codeLines = null;
+                codeLang = '';
+            } else {
+                codeLines.push(line);
+            }
+            return;
+        }
+
+        const fenceMatch = line.match(/^\s*```([^`]*)$/);
+        if (fenceMatch) {
+            flushText();
+            codeLines = [];
+            codeLang = (fenceMatch[1].trim().split(/\s+/)[0] || '');
+            return;
+        }
+
+        textLines.push(line);
     });
 
-    text = escapeHtml(text);
+    if (codeLines) {
+        blocks.push({
+            type: 'code',
+            lang: codeLang,
+            code: codeLines.join('\n')
+        });
+    }
+    flushText();
+
+    return blocks;
+};
+
+const renderTextMarkdown = (source) => {
+    const text = escapeHtml(source);
     const blocks = text.split(/\n{2,}/);
 
     const renderedBlocks = blocks.map((block) => {
         const trimmed = block.trim();
-        const codeMatch = trimmed.match(/^@@CODEBLOCK_(\d+)@@$/);
-        if (codeMatch) {
-            const codeBlock = codeBlocks[Number(codeMatch[1])];
-            if (!codeBlock) {
-                return '';
-            }
-            const className = codeBlock.lang ? ` class="language-${escapeHtml(codeBlock.lang)}"` : '';
-            return `<pre><code${className}>${escapeHtml(codeBlock.code)}</code></pre>`;
+        if (!trimmed) {
+            return '';
         }
 
         const lines = block.split('\n');
@@ -116,10 +154,114 @@ const renderMarkdown = (source) => {
     return renderedBlocks.join('');
 };
 
+const renderMarkdown = (source) => {
+    if (!source) {
+        return '';
+    }
+
+    return parseMarkdownBlocks(source).map((block) => {
+        if (block.type === 'code') {
+            const className = block.lang ? ` class="language-${escapeHtml(block.lang)}"` : '';
+            return `<pre><code${className}>${escapeHtml(block.code)}</code></pre>`;
+        }
+        return renderTextMarkdown(block.text);
+    }).join('');
+};
+
 const setResultHtml = (html) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     resultText.replaceChildren(...doc.body.childNodes);
+    scheduleMathTypeset();
+};
+
+const scheduleMathTypeset = () => {
+    if (mathTypesetScheduled) {
+        return;
+    }
+    if (!window.MathJax) {
+        return;
+    }
+    const hasTypesetPromise = typeof window.MathJax.typesetPromise === 'function';
+    const hasTypeset = typeof window.MathJax.typeset === 'function';
+    const hasStartupRender = Boolean(
+        window.MathJax.startup
+        && window.MathJax.startup.document
+        && typeof window.MathJax.startup.document.renderPromise === 'function'
+    );
+    if (!hasTypesetPromise && !hasTypeset && !hasStartupRender) {
+        return;
+    }
+    mathTypesetScheduled = true;
+    window.setTimeout(() => {
+        mathTypesetScheduled = false;
+        mathTypesetQueue = mathTypesetQueue
+            .then(() => {
+                if (typeof window.MathJax.typesetPromise === 'function') {
+                    return window.MathJax.typesetPromise([resultText]);
+                }
+                if (typeof window.MathJax.typeset === 'function') {
+                    window.MathJax.typeset([resultText]);
+                    return null;
+                }
+                if (window.MathJax.startup
+                    && window.MathJax.startup.document
+                    && typeof window.MathJax.startup.document.renderPromise === 'function') {
+                    window.MathJax.startup.document.options.elements = [resultText];
+                    window.MathJax.startup.document.reset();
+                    return window.MathJax.startup.document.renderPromise();
+                }
+                return null;
+            })
+            .catch(() => {});
+    }, 75);
+};
+
+const isMathJaxReady = () => {
+    const mj = window.MathJax;
+    return Boolean(
+        mj
+        && (
+            typeof mj.typesetPromise === 'function'
+            || typeof mj.typeset === 'function'
+            || (
+                mj.startup
+                && mj.startup.document
+                && typeof mj.startup.document.renderPromise === 'function'
+            )
+        )
+    );
+};
+
+const ensureMathJaxReady = () => {
+    if (mathJaxPollId != null) {
+        return;
+    }
+    let remainingChecks = 40;
+    mathJaxPollId = window.setInterval(() => {
+        const mj = window.MathJax;
+        if (!isMathJaxReady()) {
+            remainingChecks -= 1;
+            if (remainingChecks <= 0) {
+                window.clearInterval(mathJaxPollId);
+                mathJaxPollId = null;
+            }
+            return;
+        }
+
+        const startupPromise = mj && mj.startup && mj.startup.promise && typeof mj.startup.promise.then === 'function'
+            ? mj.startup.promise
+            : Promise.resolve();
+
+        startupPromise
+            .then(() => {
+                scheduleMathTypeset();
+            })
+            .catch(() => {});
+
+        window.clearInterval(mathJaxPollId);
+        mathJaxPollId = null;
+    }, 250);
 };
 
 const setStatus = (text, isError = false) => {
@@ -170,10 +312,10 @@ const handleStreamMessage = (message) => {
 
     if (message.type === 'stream-complete') {
         loader.style.display = 'none';
-        if (message.fullText) {
+        if (!rawContent && message.fullText) {
             rawContent = message.fullText;
-            setResultHtml(renderMarkdown(rawContent));
         }
+        setResultHtml(renderMarkdown(rawContent));
         setStatus('Complete');
         stopButton.disabled = true;
         copyButton.disabled = rawContent.trim().length === 0;
@@ -251,3 +393,4 @@ window.addEventListener('keydown', (event) => {
 });
 
 startStream();
+ensureMathJaxReady();

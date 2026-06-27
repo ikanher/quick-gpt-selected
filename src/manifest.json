@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Quick GPT Selected",
   "description": "Uses GPT to process selected text and display streaming results inline. Click \"More\" for a detailed popup response.",
-  "version": "0.5",
+  "version": "0.6",
   "browser_specific_settings": {
     "gecko": {
       "id": "quick-gpt-selected@rehn.fi",
@@ -21,6 +21,7 @@
   "background": {
     "scripts": ["background.js"]
   },
+  "content_security_policy": "script-src 'self'; object-src 'self'",
   "permissions": [
     "contextMenus",
     "storage",
