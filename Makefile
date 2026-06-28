@@ -2,27 +2,24 @@ EXTENSION_NAME := quick_gqt_selected
 EXTENSION_DIR := src
 BUILD_DIR := build
 DIST_DIR := dist
-SOURCES := $(shell find $(EXTENSION_DIR)/ -type f ! -path '$(EXTENSION_DIR)/vendor/mathjax/*' ! -name '*~')
-MATHJAX_SRC := node_modules/mathjax/es5
-MATHJAX_SRC_ALT := node_modules/mathjax
-NPM_ROOT := $(shell npm root 2>/dev/null)
-MATHJAX_SRC_NPM_ROOT := $(NPM_ROOT)/mathjax
-MATHJAX_VENDOR_DIR := $(EXTENSION_DIR)/vendor/mathjax
-MATHJAX_COMPONENT := tex-svg.js
+SOURCES := $(shell find $(EXTENSION_DIR)/ -type f ! -path '$(EXTENSION_DIR)/vendor/*' ! -name '*~')
+KATEX_SRC := node_modules/katex
+KATEX_DIST := $(KATEX_SRC)/dist
+KATEX_VENDOR_DIR := $(EXTENSION_DIR)/vendor/katex
 LEGACY_MIN_VERSION := 58.0
 LEGACY_XPI := $(EXTENSION_NAME)-legacy.xpi
 LEGACY_JQ_FILTER := .applications={gecko:{id:.browser_specific_settings.gecko.id,strict_min_version:"LEGACY_MIN_VERSION"}} | del(.browser_specific_settings)
 
-.PHONY: clean xpi legacy-xpi vendor-mathjax
+.PHONY: clean xpi legacy-xpi vendor-katex
 
-xpi: vendor-mathjax $(SOURCES)
+xpi: vendor-katex $(SOURCES)
 	rm -rf $(BUILD_DIR) $(DIST_DIR)/$(EXTENSION_NAME).xpi
 	mkdir -p $(DIST_DIR) $(BUILD_DIR)
 	rsync -a --exclude='*~' $(EXTENSION_DIR)/ $(BUILD_DIR)/
 	cd $(BUILD_DIR); zip -r ../$(DIST_DIR)/$(EXTENSION_NAME).xpi *
 	rm -rf $(BUILD_DIR)
 
-legacy-xpi: vendor-mathjax $(SOURCES)
+legacy-xpi: vendor-katex $(SOURCES)
 	rm -rf $(BUILD_DIR) $(DIST_DIR)/$(LEGACY_XPI)
 	mkdir -p $(DIST_DIR) $(BUILD_DIR)
 	rsync -a --exclude='*~' $(EXTENSION_DIR)/ $(BUILD_DIR)/
@@ -31,31 +28,26 @@ legacy-xpi: vendor-mathjax $(SOURCES)
 	cd $(BUILD_DIR); zip -r ../$(DIST_DIR)/$(LEGACY_XPI) *
 	rm -rf $(BUILD_DIR)
 
-vendor-mathjax:
-	@if [ ! -f "$(MATHJAX_SRC)/$(MATHJAX_COMPONENT)" ] && [ ! -f "$(MATHJAX_SRC_ALT)/$(MATHJAX_COMPONENT)" ] && [ ! -f "$(MATHJAX_SRC_NPM_ROOT)/$(MATHJAX_COMPONENT)" ]; then \
-		echo "Missing MathJax sources."; \
-		echo "Expected one of:"; \
-		echo "  $(MATHJAX_SRC)/$(MATHJAX_COMPONENT) (MathJax v3)"; \
-		echo "  $(MATHJAX_SRC_ALT)/$(MATHJAX_COMPONENT) (MathJax v4)"; \
-		echo "  $(MATHJAX_SRC_NPM_ROOT)/$(MATHJAX_COMPONENT) (from npm root)"; \
+vendor-katex:
+	@if [ ! -f "$(KATEX_DIST)/katex.min.js" ] || [ ! -f "$(KATEX_DIST)/katex.min.css" ] || [ ! -d "$(KATEX_DIST)/fonts" ]; then \
+		echo "Missing KaTeX sources."; \
+		echo "Expected:"; \
+		echo "  $(KATEX_DIST)/katex.min.js"; \
+		echo "  $(KATEX_DIST)/katex.min.css"; \
+		echo "  $(KATEX_DIST)/fonts"; \
 		echo "Run in this repo: npm install"; \
 		exit 1; \
 	fi
-	rm -rf $(MATHJAX_VENDOR_DIR)
-	mkdir -p $(MATHJAX_VENDOR_DIR)
-	@if [ -f "$(MATHJAX_SRC)/$(MATHJAX_COMPONENT)" ]; then \
-		mathjax_src="$(MATHJAX_SRC)"; \
-	elif [ -f "$(MATHJAX_SRC_NPM_ROOT)/$(MATHJAX_COMPONENT)" ]; then \
-		mathjax_src="$(MATHJAX_SRC_NPM_ROOT)"; \
-	else \
-		mathjax_src="$(MATHJAX_SRC_ALT)"; \
+	rm -rf $(EXTENSION_DIR)/vendor/mathjax $(KATEX_VENDOR_DIR)
+	mkdir -p $(KATEX_VENDOR_DIR)
+	cp "$(KATEX_DIST)/katex.min.js" "$(KATEX_VENDOR_DIR)/katex.min.js"
+	cp "$(KATEX_DIST)/katex.min.css" "$(KATEX_VENDOR_DIR)/katex.min.css"
+	cp -R "$(KATEX_DIST)/fonts" "$(KATEX_VENDOR_DIR)/fonts"
+	@if [ -f "$(KATEX_SRC)/LICENSE" ]; then \
+		cp "$(KATEX_SRC)/LICENSE" "$(KATEX_VENDOR_DIR)/LICENSE"; \
 	fi; \
-	cp "$$mathjax_src/$(MATHJAX_COMPONENT)" "$(MATHJAX_VENDOR_DIR)/$(MATHJAX_COMPONENT)"; \
-	if [ -f "$$mathjax_src/LICENSE" ]; then \
-		cp "$$mathjax_src/LICENSE" "$(MATHJAX_VENDOR_DIR)/LICENSE"; \
-	fi; \
-	if [ -f "$$mathjax_src/package.json" ]; then \
-		cp "$$mathjax_src/package.json" "$(MATHJAX_VENDOR_DIR)/package.json"; \
+	if [ -f "$(KATEX_SRC)/package.json" ]; then \
+		cp "$(KATEX_SRC)/package.json" "$(KATEX_VENDOR_DIR)/package.json"; \
 	fi
 
 clean:

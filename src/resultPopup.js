@@ -12,9 +12,6 @@ const requestId = params.get('requestId') || 'latest';
 let activeRequestId = requestId;
 let port = null;
 let rawContent = '';
-let mathTypesetScheduled = false;
-let mathTypesetQueue = Promise.resolve();
-let mathJaxPollId = null;
 
 const escapeHtml = (value) => value.replace(/[&<>"']/g, (char) => {
     switch (char) {
@@ -38,13 +35,55 @@ const isSafeUrl = (value) => {
     return /^https?:\/\//i.test(trimmed) || /^mailto:/i.test(trimmed);
 };
 
+const renderKatex = (tex, displayMode, originalText) => {
+    if (!window.katex || typeof window.katex.renderToString !== 'function') {
+        return escapeHtml(originalText);
+    }
+
+    try {
+        return window.katex.renderToString(tex.trim(), {
+            displayMode,
+            output: 'html',
+            strict: 'ignore',
+            throwOnError: false,
+            trust: false
+        });
+    } catch (error) {
+        return escapeHtml(originalText);
+    }
+};
+
+const isLikelyDollarMath = (tex) => /[A-Za-z\\_^{}=<>+\-*/]/.test(tex);
+
 const renderInlineMarkdown = (text) => {
-    const codeSpans = [];
+    const protectedSpans = [];
+    const protect = (html) => {
+        const token = `@@QGS_INLINE_${protectedSpans.length}@@`;
+        protectedSpans.push(html);
+        return token;
+    };
+
     let output = text.replace(/`([^`]+)`/g, (match, code) => {
-        codeSpans.push(code);
-        return `@@INLINE_CODE_${codeSpans.length - 1}@@`;
+        return protect(`<code>${escapeHtml(code)}</code>`);
     });
 
+    output = output.replace(/\\\[([\s\S]+?)\\\]/g, (match, tex) => {
+        return protect(renderKatex(tex, true, match));
+    });
+    output = output.replace(/\$\$([\s\S]+?)\$\$/g, (match, tex) => {
+        return protect(renderKatex(tex, true, match));
+    });
+    output = output.replace(/\\\(([\s\S]+?)\\\)/g, (match, tex) => {
+        return protect(renderKatex(tex, false, match));
+    });
+    output = output.replace(/(^|[^\\$])\$([^\n$]+?)\$/g, (match, prefix, tex) => {
+        if (!isLikelyDollarMath(tex)) {
+            return match;
+        }
+        return `${prefix}${protect(renderKatex(tex, false, `$${tex}$`))}`;
+    });
+
+    output = escapeHtml(output);
     output = output.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     output = output.replace(/(^|[\s])\*([^*]+)\*/g, '$1<em>$2</em>');
     output = output.replace(/(^|[\s])_([^_]+)_/g, '$1<em>$2</em>');
@@ -56,9 +95,8 @@ const renderInlineMarkdown = (text) => {
         return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
     });
 
-    return output.replace(/@@INLINE_CODE_(\d+)@@/g, (match, index) => {
-        const code = codeSpans[Number(index)] || '';
-        return `<code>${code}</code>`;
+    return output.replace(/@@QGS_INLINE_(\d+)@@/g, (match, index) => {
+        return protectedSpans[Number(index)] || '';
     });
 };
 
@@ -118,8 +156,7 @@ const parseMarkdownBlocks = (source) => {
 };
 
 const renderTextMarkdown = (source) => {
-    const text = escapeHtml(source);
-    const blocks = text.split(/\n{2,}/);
+    const blocks = source.split(/\n{2,}/);
 
     const renderedBlocks = blocks.map((block) => {
         const trimmed = block.trim();
@@ -172,96 +209,6 @@ const setResultHtml = (html) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     resultText.replaceChildren(...doc.body.childNodes);
-    scheduleMathTypeset();
-};
-
-const scheduleMathTypeset = () => {
-    if (mathTypesetScheduled) {
-        return;
-    }
-    if (!window.MathJax) {
-        return;
-    }
-    const hasTypesetPromise = typeof window.MathJax.typesetPromise === 'function';
-    const hasTypeset = typeof window.MathJax.typeset === 'function';
-    const hasStartupRender = Boolean(
-        window.MathJax.startup
-        && window.MathJax.startup.document
-        && typeof window.MathJax.startup.document.renderPromise === 'function'
-    );
-    if (!hasTypesetPromise && !hasTypeset && !hasStartupRender) {
-        return;
-    }
-    mathTypesetScheduled = true;
-    window.setTimeout(() => {
-        mathTypesetScheduled = false;
-        mathTypesetQueue = mathTypesetQueue
-            .then(() => {
-                if (typeof window.MathJax.typesetPromise === 'function') {
-                    return window.MathJax.typesetPromise([resultText]);
-                }
-                if (typeof window.MathJax.typeset === 'function') {
-                    window.MathJax.typeset([resultText]);
-                    return null;
-                }
-                if (window.MathJax.startup
-                    && window.MathJax.startup.document
-                    && typeof window.MathJax.startup.document.renderPromise === 'function') {
-                    window.MathJax.startup.document.options.elements = [resultText];
-                    window.MathJax.startup.document.reset();
-                    return window.MathJax.startup.document.renderPromise();
-                }
-                return null;
-            })
-            .catch(() => {});
-    }, 75);
-};
-
-const isMathJaxReady = () => {
-    const mj = window.MathJax;
-    return Boolean(
-        mj
-        && (
-            typeof mj.typesetPromise === 'function'
-            || typeof mj.typeset === 'function'
-            || (
-                mj.startup
-                && mj.startup.document
-                && typeof mj.startup.document.renderPromise === 'function'
-            )
-        )
-    );
-};
-
-const ensureMathJaxReady = () => {
-    if (mathJaxPollId != null) {
-        return;
-    }
-    let remainingChecks = 40;
-    mathJaxPollId = window.setInterval(() => {
-        const mj = window.MathJax;
-        if (!isMathJaxReady()) {
-            remainingChecks -= 1;
-            if (remainingChecks <= 0) {
-                window.clearInterval(mathJaxPollId);
-                mathJaxPollId = null;
-            }
-            return;
-        }
-
-        const startupPromise = mj && mj.startup && mj.startup.promise && typeof mj.startup.promise.then === 'function'
-            ? mj.startup.promise
-            : Promise.resolve();
-
-        startupPromise
-            .then(() => {
-                scheduleMathTypeset();
-            })
-            .catch(() => {});
-
-        window.clearInterval(mathJaxPollId);
-        mathJaxPollId = null;
-    }, 250);
 };
 
 const setStatus = (text, isError = false) => {
@@ -393,4 +340,3 @@ window.addEventListener('keydown', (event) => {
 });
 
 startStream();
-ensureMathJaxReady();

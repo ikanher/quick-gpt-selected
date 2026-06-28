@@ -54,6 +54,54 @@ Legacy build:
    - AMO: upload `dist/quick_gqt_selected.xpi`
    - GitHub Releases: attach both `dist/quick_gqt_selected.xpi` and `dist/quick_gqt_selected-legacy.xpi`
 
+### AMO source build instructions
+
+The extension's own source files are plain JavaScript, HTML, and CSS. They are
+not transpiled, concatenated, or minified. The only generated third-party code
+included in the extension is the official KaTeX browser bundle, stylesheet, and
+fonts under `src/vendor/katex/`, copied from the pinned npm dependency
+`katex@0.17.0`.
+
+Build environment used for the submitted package:
+
+- Linux
+- Node.js v20.16.0
+- npm 9.2.0
+- GNU Make 4.3
+- rsync 3.3.0
+- Info-ZIP `zip`
+- jq 1.7, only needed for `make legacy-xpi`
+
+Install the required tools with your operating system package manager, and
+install Node.js/npm from https://nodejs.org/ or your operating system package
+manager. Then run:
+
+```sh
+npm install
+make xpi
+```
+
+This creates the AMO package at:
+
+```text
+dist/quick_gqt_selected.xpi
+```
+
+For the optional legacy package, run:
+
+```sh
+make legacy-xpi
+```
+
+The build script is `Makefile`. It performs these steps:
+
+1. Copies `katex@0.17.0`'s `katex.min.js`, `katex.min.css`, `fonts/`,
+   `LICENSE`, and `package.json` from `node_modules/katex/` into
+   `src/vendor/katex/`.
+2. Copies the extension source from `src/` into a temporary `build/` directory,
+   excluding editor backup files.
+3. Zips the temporary build directory into `dist/quick_gqt_selected.xpi`.
+
 ## Configuration
 
 **OpenAI (ChatGPT) API key needed**: Open the add-on settings and add your OpenAI key.

@@ -56,11 +56,14 @@ const getStoredOptions = async () => {
 const ensureInlineOverlay = async (tabId) => {
     try {
         await browser.tabs.sendMessage(tabId, { type: 'inline-ping' });
+        return true;
     } catch (error) {
         try {
             await browser.tabs.executeScript(tabId, { file: 'inlineOverlay.js' });
+            return true;
         } catch (injectError) {
             console.error('Failed to inject inline overlay:', injectError);
+            return false;
         }
     }
 };
@@ -530,15 +533,22 @@ const startInlineRequest = async (query, prompt, promptName, tabId) => {
     });
     latestRequestId = requestId;
 
-    await ensureInlineOverlay(tabId);
-    try {
-        await browser.tabs.sendMessage(tabId, {
-            type: 'inline-start',
-            requestId,
-            promptName
-        });
-    } catch (error) {
-        console.error('Failed to start inline overlay:', error);
+    const inlineReady = await ensureInlineOverlay(tabId);
+    let startedInline = false;
+    if (inlineReady) {
+        try {
+            await browser.tabs.sendMessage(tabId, {
+                type: 'inline-start',
+                requestId,
+                promptName
+            });
+            startedInline = true;
+        } catch (error) {
+            console.error('Failed to start inline overlay:', error);
+        }
+    }
+    if (!startedInline) {
+        await openPopup(requestId, tabId);
     }
 
     streamChatCompletion(requestId);

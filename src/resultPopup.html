@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>GPT Result</title>
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
   <style>
     :root {
       --qgs-ink: #1f2937;
@@ -217,6 +218,12 @@
     .verbose-result a {
       color: var(--qgs-link);
     }
+
+    .verbose-result .katex-display {
+      margin: 12px 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
   </style>
 </head>
 <body>
@@ -237,8 +244,7 @@
       <div id="verbose-result" class="verbose-result"></div>
     </div>
   </div>
-  <script src="mathjaxConfig.js"></script>
-  <script defer src="vendor/mathjax/tex-svg.js"></script>
+  <script defer src="vendor/katex/katex.min.js"></script>
   <script defer src="resultPopup.js"></script>
 </body>
 </html>

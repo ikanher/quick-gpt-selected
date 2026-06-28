@@ -9,6 +9,6 @@
     "lint:web-ext": "web-ext lint --source-dir=src"
   },
   "devDependencies": {
-    "mathjax": "4.1.0"
+    "katex": "0.17.0"
   }
 }
